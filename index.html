@@ -1,0 +1,309 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<link rel="manifest" href="manifest.webmanifest">
+<link rel="apple-touch-icon" href="icons/icon-192.png">
+<title>Exam & Memorization Dashboard</title>
+<style>
+:root{
+  --bg:#f6f9ff; --card:#ffffff; --muted:#607087; --text:#0f172a; --border:#e6eef7;
+  --accent:#1565c0; --good:#1b5e20; --warn:#e65100; --bad:#c62828;
+  --radius:14px; --shadow:0 8px 24px rgba(0,0,0,.08);
+}
+@media (prefers-color-scheme: dark){
+  :root{ --bg:#0b0f14; --card:#121923; --muted:#96a6ba; --text:#eaf2ff; --border:#1f2a3a;
+  --accent:#5ab0ff; --good:#2ecc71; --warn:#ffa646; --bad:#ff5a5f; --shadow:0 10px 30px rgba(0,0,0,.35); }
+}
+*{box-sizing:border-box} html,body{height:100%}
+body{margin:0; font:16px/1.4 system-ui,-apple-system,Segoe UI,Roboto,Helvetica,Arial; background:var(--bg); color:var(--text)}
+.wrap{max-width:1200px; margin:0 auto; padding:14px 16px}
+header{position:sticky; top:0; background:color-mix(in oklab, var(--bg) 85%, transparent); backdrop-filter:blur(10px); border-bottom:1px solid var(--border); z-index:10}
+.topbar{display:flex; align-items:center; justify-content:space-between; gap:10px}
+.title{font-weight:800; font-size:20px}
+.actions{display:flex; gap:8px; flex-wrap:wrap}
+button, input, select, textarea{
+  border:1px solid var(--border); background:var(--card); color:var(--text); padding:10px 12px; border-radius:12px; box-shadow:var(--shadow);
+}
+button{cursor:pointer} button.primary{background:var(--accent); color:#fff; font-weight:700}
+main{padding:16px}
+.grid{display:grid; gap:14px}
+@media(min-width:1000px){ .grid{grid-template-columns: 3fr 2fr} }
+.card{background:var(--card); border:1px solid var(--border); border-radius:var(--radius); padding:16px; box-shadow:var(--shadow)}
+.card h2{margin:0 0 10px 0; font-size:16px; opacity:.9}
+.row{display:flex; gap:10px; align-items:center; flex-wrap:wrap}
+.countdowns{display:grid; gap:12px; grid-template-columns: repeat(2,1fr)}
+@media(min-width:900px){ .countdowns{grid-template-columns: repeat(4,1fr)} }
+.count{border:1px solid var(--border); border-radius:12px; padding:10px; display:grid; gap:8px}
+.count .d{font-size:28px; font-weight:800}
+.progress{height:8px; background:#dbe7f5; border-radius:999px; overflow:hidden}
+.progress>i{display:block; height:100%; background:var(--accent); width:0%}
+.section-title{display:flex; align-items:center; justify-content:space-between}
+.columns{display:grid; gap:12px; grid-template-columns:1fr}
+@media(min-width:1000px){ .columns{grid-template-columns: 1fr 1fr 1fr} }
+.list{display:flex; flex-direction:column; gap:8px; max-height:380px; overflow:auto}
+.item{display:flex; align-items:center; justify-content:space-between; gap:10px; border:1px solid var(--border); border-radius:12px; padding:10px}
+.badge{padding:4px 8px; border-radius:999px; background: color-mix(in oklab, var(--accent), white 15%); color:#fff; font-size:12px}
+.muted{color:var(--muted); font-size:12px}
+footer{color:var(--muted); text-align:center; padding:12px}
+.kbd{font-family:ui-monospace,SFMono-Regular,Menlo,Consolas,monospace; font-size:12px; padding:2px 6px; border:1px solid var(--border); border-radius:6px; background:color-mix(in oklab, var(--card), white 3%)}
+dialog::backdrop{background:rgba(0,0,0,.5)}
+dialog{border:none; border-radius:16px; padding:0; overflow:hidden; background:var(--card); box-shadow:var(--shadow); max-width:560px; width:calc(100% - 28px)}
+.modal-head{display:flex; align-items:center; justify-content:space-between; padding:14px 16px; border-bottom:1px solid var(--border)}
+.modal-body{padding:16px; display:grid; gap:10px}
+hr{border:none; border-top:1px solid var(--border); margin:10px 0}
+.link{color:var(--accent); text-decoration:underline; cursor:pointer}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap topbar">
+    <div class="title">📅 Exam + Memorization</div>
+    <div class="actions">
+      <button id="addTopicBtn" class="primary">+ New Topic</button>
+      <button id="exportBtn">Export</button>
+      <button id="importBtn">Import</button>
+      <button id="resetBtn" style="background:#ff5a5f;color:#fff;border-color:#c62828">Reset</button>
+    </div>
+  </div>
+</header>
+
+<main class="wrap grid">
+  <section class="card">
+    <div class="section-title">
+      <h2>Dashboard</h2>
+      <div class="muted">Date: <span id="today"></span></div>
+    </div>
+    <div class="countdowns" id="countdowns"></div>
+  </section>
+
+  <section class="card">
+    <h2>Quick Add Topic</h2>
+    <div class="row">
+      <input id="topicTitle" placeholder="Topic title (e.g., Polity—Fundamental Rights)">
+      <input id="topicSubject" placeholder="Subject (e.g., Polity)">
+      <button id="quickAdd" class="primary">Add to Mid Box</button>
+    </div>
+    <div class="muted" style="margin-top:6px">New topics start in <b>Mid Box</b> → after <b>4 days</b> they auto‑move to <b>Week Accumulation</b> → after <b>14 days</b> (checked nightly at 11 PM) they move to <b>Month Accumulation</b>.</div>
+  </section>
+
+  <section class="card">
+    <div class="section-title">
+      <h2>Memorization</h2>
+      <div class="muted">Study = ✓, Miss = ✗ • Tracks stay offline</div>
+    </div>
+    <div class="columns">
+      <div>
+        <h3>Mid Box</h3>
+        <div class="list" id="midList"></div>
+      </div>
+      <div>
+        <h3>Week Accumulation</h3>
+        <div class="list" id="weekList"></div>
+      </div>
+      <div>
+        <h3>Month Accumulation</h3>
+        <div class="list" id="monthList"></div>
+      </div>
+    </div>
+  </section>
+</main>
+
+<footer>Made for iPad • Works offline • v1</footer>
+
+<dialog id="topicModal">
+  <div class="modal-head">
+    <strong>New Topic</strong>
+    <button data-close>✕</button>
+  </div>
+  <form class="modal-body" id="topicForm">
+    <div class="row">
+      <input id="mTitle" required placeholder="Title">
+      <input id="mSubject" placeholder="Subject">
+    </div>
+    <div>
+      <label class="muted">Notes</label>
+      <textarea id="mNotes" placeholder="Optional notes"></textarea>
+    </div>
+    <div class="row" style="justify-content:flex-end">
+      <button type="button" data-close>Cancel</button>
+      <button class="primary">Add</button>
+    </div>
+  </form>
+</dialog>
+
+<dialog id="examModal">
+  <div class="modal-head">
+    <strong>Edit Exam</strong>
+    <button data-close>✕</button>
+  </div>
+  <form class="modal-body" id="examForm">
+    <div class="row">
+      <input id="examName" required placeholder="Exam name">
+      <input id="examDate" type="date" required>
+    </div>
+    <div class="row" style="justify-content:flex-end">
+      <button type="button" data-close>Cancel</button>
+      <button class="primary">Save</button>
+    </div>
+  </form>
+</dialog>
+
+<input type="file" id="importFile" accept="application/json" style="position:absolute;left:-10000px">
+
+<script>
+const qs=(s)=>document.querySelector(s); const qsa=(s)=>Array.from(document.querySelectorAll(s));
+
+const storeKey='exam-memo-v1';
+const state = JSON.parse(localStorage.getItem(storeKey) || JSON.stringify({
+  exams:[
+    {id:'e1', name:'Exam 1', date:null},
+    {id:'e2', name:'Exam 2', date:null},
+    {id:'e3', name:'Exam 3', date:null},
+    {id:'e4', name:'Exam 4', date:null},
+  ],
+  topics:[], // {id,title,subject,notes,stage:'mid'|'week'|'month',createdAt,stageAt,lastAction,log:[{ts,action}]}
+  lastPromoteCheck: null
+}));
+function save(){ localStorage.setItem(storeKey, JSON.stringify(state)); renderAll(); }
+
+function uid(){ return Math.random().toString(36).slice(2,9) }
+function daysBetween(a,b){ const d=(new Date(b)-new Date(a))/(1000*60*60*24); return Math.floor(d); }
+function fmtDate(d){ if(!d) return '—'; const x=new Date(d); return x.toLocaleDateString(); }
+
+// Promotion logic per your rule
+function promoteTopics(){
+  const now=new Date();
+  // move to week after 4 days in mid
+  state.topics.forEach(t=>{
+    if (t.stage==='mid' && daysBetween(t.stageAt||t.createdAt, now)>=4){
+      t.stage='week'; t.stageAt=now.toISOString();
+    }
+  });
+  // nightly at 23:00 move week->month after 14 days in week
+  const last = state.lastPromoteCheck ? new Date(state.lastPromoteCheck) : null;
+  const shouldNightly = (!last) || (now - last > 1000*60*60*12);
+  if (shouldNightly){
+    state.topics.forEach(t=>{
+      if (t.stage==='week' && daysBetween(t.stageAt||t.createdAt, now)>=14){
+        t.stage='month'; t.stageAt=now.toISOString();
+      }
+    });
+    state.lastPromoteCheck = now.toISOString();
+  }
+}
+
+function addTopic(title,subject,notes){
+  const t={id:uid(), title:title.trim(), subject:subject.trim()||'', notes:notes||'', stage:'mid', createdAt:new Date().toISOString(), stageAt:new Date().toISOString(), lastAction:null, log:[]};
+  state.topics.unshift(t); save();
+}
+function logAction(id,action){
+  const t=state.topics.find(x=>x.id===id); if(!t) return;
+  t.lastAction=action; t.log.push({ts:new Date().toISOString(), action});
+  save();
+}
+function removeTopic(id){
+  const i=state.topics.findIndex(x=>x.id===id); if(i>=0){ state.topics.splice(i,1); save(); }
+}
+
+// Exams
+let editingExamId=null;
+function openExamModal(ex){
+  editingExamId=ex.id;
+  qs('#examName').value=ex.name||'';
+  qs('#examDate').value = ex.date ? new Date(ex.date).toISOString().slice(0,10) : '';
+  openDialog(qs('#examModal'));
+}
+
+function renderCountdowns(){
+  const box=qs('#countdowns'); box.innerHTML='';
+  state.exams.forEach(ex=>{
+    const wrap=document.createElement('div'); wrap.className='count';
+    const days = ex.date ? Math.max(0, Math.ceil((new Date(ex.date)-new Date())/(1000*60*60*24))) : '—';
+    let pct=0;
+    if(ex.date){
+      const start = new Date(); const end=new Date(ex.date);
+      const total=Math.max(1,(end-start)/(1000*60*60*24)+120);
+      pct = Math.min(100, Math.max(0, (120/total)*100));
+    }
+    wrap.innerHTML = `
+      <div class="d">${days}<span class="muted"> days</span></div>
+      <div class="progress"><i style="width:${pct}%"></i></div>
+      <div class="row"><b>${ex.name||'Exam'}</b></div>
+      <div class="row">
+        <button data-edit="${ex.id}">Edit</button>
+        ${ex.date? `<span class="muted">Date: ${fmtDate(ex.date)}</span>`: '<span class="muted">Set date</span>'}
+      </div>`;
+    box.appendChild(wrap);
+  });
+  qsa('[data-edit]').forEach(b=>b.onclick=()=>openExamModal(state.exams.find(x=>x.id===b.dataset.edit)));
+}
+
+function renderLists(){
+  const mid=qs('#midList'); const week=qs('#weekList'); const month=qs('#monthList');
+  mid.innerHTML=week.innerHTML=month.innerHTML='';
+  const mk = (t)=>{
+    const el=document.createElement('div'); el.className='item';
+    const rate = t.log.length ? Math.round(100*(t.log.filter(x=>x.action==='study').length)/t.log.length) : 0;
+    el.innerHTML = `
+      <div class="row">
+        <div class="badge">${t.subject||'General'}</div>
+        <div><b>${t.title.replace(/[<>]/g,'')}</b><div class="muted">Added ${fmtDate(t.createdAt)} • Success ${rate}%</div></div>
+      </div>
+      <div class="row">
+        <button data-act="study" data-id="${t.id}" class="primary">Study</button>
+        <button data-act="miss" data-id="${t.id}">Miss</button>
+        <button data-del="${t.id}" style="background:transparent">🗑️</button>
+      </div>`;
+    return el;
+  };
+  state.topics.filter(t=>t.stage==='mid').forEach(t=>mid.appendChild(mk(t)));
+  state.topics.filter(t=>t.stage==='week').forEach(t=>week.appendChild(mk(t)));
+  state.topics.filter(t=>t.stage==='month').forEach(t=>month.appendChild(mk(t)));
+  qsa('[data-act]').forEach(b=>b.onclick=()=>logAction(b.dataset.id, b.dataset.act));
+  qsa('[data-del]').forEach(b=>b.onclick=()=>{ if(confirm('Delete topic?')) removeTopic(b.dataset.del) });
+}
+
+function openDialog(d){ d.showModal(); d.querySelectorAll('[data-close]').forEach(b=>b.onclick=()=>d.close()); }
+
+// Events
+qs('#addTopicBtn').onclick=()=>{ qs('#mTitle').value=''; qs('#mSubject').value=''; qs('#mNotes').value=''; openDialog(qs('#topicModal')); };
+qs('#topicForm').onsubmit=(e)=>{ e.preventDefault(); addTopic(qs('#mTitle').value, qs('#mSubject').value, qs('#mNotes').value); qs('#topicModal').close(); };
+qs('#quickAdd').onclick=()=>{ const t=qs('#topicTitle').value.trim(); if(!t) return; addTopic(t, qs('#topicSubject').value.trim(), ''); qs('#topicTitle').value=''; };
+
+qs('#examForm').onsubmit=(e)=>{
+  e.preventDefault();
+  const ex=state.exams.find(x=>x.id===editingExamId); if(!ex) return;
+  ex.name = qs('#examName').value.trim();
+  ex.date = qs('#examDate').value ? new Date(qs('#examDate').value).toISOString() : null;
+  qs('#examModal').close(); save();
+};
+
+qs('#exportBtn').onclick=()=>{
+  const blob = new Blob([JSON.stringify(state,null,2)], {type:'application/json'});
+  const url = URL.createObjectURL(blob); const a=document.createElement('a');
+  a.href=url; a.download='exam-memo-data.json'; a.click(); URL.revokeObjectURL(url);
+};
+qs('#importBtn').onclick=()=>qs('#importFile').click();
+qs('#importFile').onchange=async(e)=>{
+  const f=e.target.files[0]; if(!f) return;
+  try{ const txt=await f.text(); const data=JSON.parse(txt); if(!data.exams||!data.topics) throw new Error('Invalid'); Object.assign(state,data); save(); alert('Imported ✓'); }catch(err){ alert('Import failed: '+err.message); }
+};
+qs('#resetBtn').onclick=()=>{ if(confirm('Reset all data?')){ localStorage.removeItem(storeKey); location.reload(); } };
+
+function renderAll(){
+  qs('#today').textContent = new Date().toLocaleDateString();
+  promoteTopics();
+  renderCountdowns();
+  renderLists();
+}
+
+// PWA
+if('serviceWorker' in navigator){ window.addEventListener('load', ()=> navigator.serviceWorker.register('./sw.js')); }
+
+renderAll();
+</script>
+</body>
+</html>

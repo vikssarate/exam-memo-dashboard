@@ -1,0 +1,1 @@
+Exam + Memorization Dashboard (PWA). Mid->Week after 4 days; Week->Month after 14 days. Export/Import supported.
